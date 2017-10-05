@@ -1,0 +1,21 @@
+sudo: required
+language: ruby
+services:
+  - docker
+install: true
+script:
+  - docker build -t procube/jwt-nginx-lua .
+  - mkdir -p /tmp/RPMS/x86_64
+  - sudo chown 111:111 -R /tmp/RPMS
+  - docker run -it --rm --name jwt-nginx-lua -v /tmp/RPMS:/home/builder/rpmbuild/RPMS procube/jwt-nginx-lua
+  - (cd /tmp;tar czf - RPMS) > $TRAVIS_BUILD_DIR/jwt-nginx-lua.tar.gz
+deploy:
+  provider: releases
+  api_key:
+    secure: "kjfWh30EOYTnMm5fklQPoFjoZjshSr948ue2eLDgyA+9TCK7xM4CBO0CcrDFaLhPUoAYWHCkJlqC/MA/R7kgE7mrhH+JdjaZvYoNohJ7qibnp24w6miWrykewsw1EAxKahn2KHAO6gCV8oNLfyuDJ0i+EOLQ74SPnNXT2yCRgRqFjTikK/eWK/GiN/6piMpjzWzS5uDhNN9NUZKtf5C1Yd2bPR8B2DjECutXoGyVVmqn21PGaizc6xKFn4DuH8x5uLM2cpcpgyhnRJQVIfz90weANBUSbhunNbPf2Hkt8L4PR1ZOMcQGKOxoLICFbb8GlDxeUtaONEoVwKMCguMYbJ7GI5vqvRCAYyEoYj4PwT9MnZhP5CKonzIyIFFw26rCxNt0Kh89vbJN0bW8JPvDs6E7fuCxoPD/DuKX60pDU4bgxqtsFUGBoxVzOd3tI3I4jBRDHfULBDVoU15ZYiTnxqalEjDhKUvZQJ4rEFh7pYwSprStFAlZuBzeawwEgg5njFR+FWF0kp51lYpL2iyqqrHQ8oKddl+cy922V4qsUrn6yOUFVAllie8FJ5EluKC8yQbErMm1sU+QeWzsrCerE/36XKWzBTHKTRjpjc7pOayDe6Nvo8RL5RTewDhHgvJ8NqturPwVCbr0r+zmARRmc2DbE4iQsU3gxPJqrDjl7II="
+  file: jwt-nginx-lua.tar.gz
+  overwrite: true
+  skip_cleanup: true
+  on:
+    repo: procube-open/jwt-nginx-lua
+    tags: true
