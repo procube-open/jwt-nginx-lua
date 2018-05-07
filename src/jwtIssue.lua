@@ -21,6 +21,17 @@ function table_dump(o)
   end
 end
 
+function updatePayload(jwtconfig, updateTemplate)
+  local dtnow = os.time()
+  local payload = updateTemplate
+  local oldexp = updateTemplate.exp
+  payload.nbf = dtnow
+  payload.iat = dtnow
+  payload.exp = dtnow + jwtconfig.encode.expSec
+  ngx.log(ngx.INFO, "JWT updated. Exp " .. oldexp .. " to " .. payload.exp)
+  return payload, err
+end
+
 function genPayload(jwtconfig)
   local targetVarName = jwtconfig.subject.var_name
   local targetVal = ""
@@ -100,9 +111,25 @@ function errorExit(jwtconfig, strMessage, strCode)
   ngx.exit(ngx.OK)
 end
 
+function errorExitNoConf()
+  ngx.status = ngx.HTTP_INTERNAL_SERVER_ERROR
+  ngx.say("Cannot load configuration file...")
+  ngx.exit(ngx.OK)
+end
+
 -- Start MAIN
 -- Read configuration,
-configRes = ngx.location.capture("/WebGate.jwt.settings/" .. ngx.var.conf)
+local confname = ngx.var.issuerconf
+if not confname or #confname == 0 then
+  if ngx.var.conf and #ngx.var.conf > 0 then
+    ngx.log(ngx.WARN, "Variable $conf for configuration is deprecated. Use $issuerconf.")
+    confname = ngx.var.conf
+  else
+    errorExitNoConf()
+  end
+end
+ngx.log(ngx.INFO, confname)
+configRes = ngx.location.capture("/WebGate.jwt.settings/" .. confname)
 local jwtconfig = cjson.decode(configRes.body)
 ngx.log(ngx.INFO, "WebGate.jwt start processing...  " .. jwtconfig.type)
 
@@ -114,7 +141,7 @@ if (req_args.redirect_uri and #req_args.redirect_uri > 0) then
 
   local ckeckUriPattern = jwtconfig.onSuccess.redirect.uriPattern
   if not ckeckUriPattern or #ckeckUriPattern == 0 then
-    ngx.log(ngx.INFO, "onSuccess.redirect.uriPatttern is not set.So is not ptermitted redirecting.")
+    ngx.log(ngx.INFO, "onSuccess.redirect.uriPatttern is not set.So is not permitted redirecting.")
     errorExit(jwtconfig, "Request includes redirect_uri patameter, but not permitted.", "redirect_not_permitted")
     return
   end
@@ -132,8 +159,15 @@ if (req_args.redirect_uri and #req_args.redirect_uri > 0) then
   ngx.log(ngx.INFO, "redirect_uri may be safe, so will be redirecting when JWT is valid.")
 end
 
+local payload, err
+if ngx.ctx.verifiedClaim then
+  ngx.log(ngx.INFO, "Update JWT for " .. ngx.ctx.verifiedClaim.sub)
+  payload, err = updatePayload(jwtconfig, ngx.ctx.verifiedClaim)
+else
+  payload, err = genPayload(jwtconfig)
+end
+
 -- Generate JWT
-local payload, err = genPayload(jwtconfig)
 local token
 if not err then
   local alg = jwtconfig.encode.alg

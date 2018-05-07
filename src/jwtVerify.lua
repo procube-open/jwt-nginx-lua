@@ -5,19 +5,31 @@ local template = require "resty.template"
 
 function exitSinceDeny(jwtconfig, msg)
   local status = ngx.HTTP_FORBIDDEN
-  if jwtconfig.onDeny ~= nil and jwtconfig.onDeny ~= nil and jwtconfig.onDeny.code ~= nil then
-   local tmpcode = tonumber(jwtconfig.onDeny.code)
-   if tmpcode then
-     status = tmpcode 
+  if jwtconfig.onDeny ~= nil and jwtconfig.onDeny.code ~= nil then
+    local tmpcode = tonumber(jwtconfig.onDeny.code)
+    if tmpcode then
+      status = tmpcode
     end
   end
-
-  local deny_thml = ngx.location.capture("/WebGate.jwt.settings/" .. jwtconfig.onDeny.template)
-  local tplfunc = template.compile(deny_thml.body)
-  local contenttype = wgu.decideContentType(jwtconfig.onDeny.template)
   ngx.status = status
-  ngx.header["Content-Type"] = contenttype
-  ngx.say(tplfunc{ message = msg })
+
+  if jwtconfig.onDeny ~= nil and jwtconfig.onDeny.template ~= nil then
+    local deny_thml = ngx.location.capture("/WebGate.jwt.settings/" .. jwtconfig.onDeny.template)
+    local tplfunc = template.compile(deny_thml.body)
+    local contenttype = wgu.decideContentType(jwtconfig.onDeny.template)
+    ngx.header["Content-Type"] = contenttype
+    ngx.say(tplfunc{ message = msg })
+  end
+
+  if jwtconfig.onDeny ~= nil and jwtconfig.onDeny.redirect ~= nil then
+    local tplfunc = template.compile(jwtconfig.onDeny.redirect.uri)
+    local location = tplfunc(ngx.var)
+    if jwtconfig.onDeny.redirect.param_name then
+      local original = ngx.var.scheme .. "://" .. ngx.var.http_host .. ngx.var.request_uri
+      location = location .. "?" .. jwtconfig.onDeny.redirect.param_name .. "=" .. wgu.urlencode(original)
+    end
+    ngx.header["location"] = location
+  end
 
   ngx.exit(ngx.HTTP_OK)
 end
@@ -150,7 +162,7 @@ function jwtVerifier.checkRevoked(jwtconfig, decodedClaim)
   end
 
   ngx.log(ngx.INFO, "User " .. decodedClaim.sub .. " is found in revokeList.")
-  
+
   local xyear, xmonth, xday, xhour, xminute, xseconds = revokeDtStr:match("(%d+)/(%d+)/(%d+) (%d+):(%d+):(%d+)")
   if xyear == nil or xmonth == nil or xday == nil or xhour == nil or xminute == nil or xseconds == nil or
      #xyear == 0 or #xmonth == 0 or #xday == 0 or #xhour == 0 or #xminute == 0 or #xseconds == 0 then
@@ -167,8 +179,23 @@ function jwtVerifier.checkRevoked(jwtconfig, decodedClaim)
   ngx.log(ngx.INFO, "User " .. decodedClaim.sub .. " is NOT revoked. iat=" .. issuedAt .. " vs rvlist=" .. revokeTs)
 end
 
+function errorExitNoConf()
+  ngx.status = ngx.HTTP_INTERNAL_SERVER_ERROR
+  ngx.say("Cannot load configuration file...")
+  ngx.exit(ngx.OK)
+end
+
 -- Read configuration,
-configRes = ngx.location.capture("/WebGate.jwt.settings/" .. ngx.var.conf)
+local confname = ngx.var.verifyconf
+if not confname or #confname == 0 then
+  if ngx.var.conf and #ngx.var.conf > 0 then
+    ngx.log(ngx.WARN, "Variable $conf for configuration is deprecated. Use $verifyconf.")
+    confname = ngx.var.conf
+  else
+    errorExitNoConf()
+  end
+end
+configRes = ngx.location.capture("/WebGate.jwt.settings/" .. confname)
 local jwtconfig = cjson.decode(configRes.body)
 ngx.log(ngx.INFO, "WebGate.jwt start processing...  " .. jwtconfig.type)
 
@@ -185,6 +212,7 @@ for _, func in ipairs(verifyingFuncs) do
         ngx.var[jwtkey] = v
       end
     end
+    ngx.ctx.verifiedClaim = claim
     ngx.exit(ngx.OK)
     return
   end
@@ -192,4 +220,3 @@ end
 
 ngx.log(ngx.INFO, "Failed to verifying token, access rejected.")
 exitSinceDeny(jwtconfig, "Suitable token was not sent.")
-
