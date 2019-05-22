@@ -25,10 +25,17 @@ function updatePayload(jwtconfig, updateTemplate)
   local dtnow = os.time()
   local payload = updateTemplate
   local oldexp = updateTemplate.exp
+  local err
   payload.nbf = dtnow
   payload.iat = dtnow
   payload.exp = dtnow + jwtconfig.encode.expSec
   ngx.log(ngx.INFO, "JWT updated. Exp " .. oldexp .. " to " .. payload.exp)
+  
+  if updateTemplate.expr and updateTemplate.expr > 0 then
+    payload.expr = updateTemplate.expr
+  else
+    ngx.log(ngx.INFO, "updatePayload(): His JWT token has no expr, so set nothing.")
+  end
   return payload, err
 end
 
@@ -58,6 +65,13 @@ function genPayload(jwtconfig)
     iat = dtnow,
     exp = dtnow + jwtconfig.encode.expSec,
   }
+
+  if jwtconfig.encode.updateExpSec and #jwtconfig.encode.updateExpSec > 0 then
+    payload.expr = dtnow + jwtconfig.encode.updateExpSec
+  else
+    ngx.log(ngx.INFO, "genPayload(): jwtconfig.encode.expSec is missing, maybe config format is too old. So do nothing.")
+    -- payload.expr = dtnow + jwtconfig.encode.expSec
+  end
 
   local privateClaim = jwtconfig.privateClaim
   if not privateClaim then
@@ -98,7 +112,7 @@ function genPayload(jwtconfig)
 end
 
 function errorExit(jwtconfig, strMessage, strCode)
-  local error_html = ngx.location.capture("/WebGate.jwt.settings/" .. jwtconfig.onError.template)
+  local error_html = ngx.location.capture("/jwt.settings/" .. jwtconfig.onError.template)
   local tplfunc = template.compile(error_html.body)
   local contenttype = wgu.decideContentType(jwtconfig.onError.template)
   if (jwtconfig.onError.code and #jwtconfig.onError.code > 0) then
@@ -129,9 +143,9 @@ if not confname or #confname == 0 then
   end
 end
 ngx.log(ngx.INFO, confname)
-configRes = ngx.location.capture("/WebGate.jwt.settings/" .. confname)
+configRes = ngx.location.capture("/jwt.settings/" .. confname)
 local jwtconfig = cjson.decode(configRes.body)
-ngx.log(ngx.INFO, "WebGate.jwt start processing...  " .. jwtconfig.type)
+ngx.log(ngx.INFO, "jwt start processing...  " .. jwtconfig.type)
 
 -- When request includes redirect_uri parameter, 
 -- check if match with onSuccess.redirect.uriPattern.
@@ -139,7 +153,10 @@ local req_args = ngx.req.get_uri_args()
 if (req_args.redirect_uri and #req_args.redirect_uri > 0) then
   ngx.log(ngx.INFO, "Request includes redirect_uri parameter. Check if is permitted.")
 
-  local ckeckUriPattern = jwtconfig.onSuccess.redirect.uriPattern
+  local ckeckUriPattern = nil
+  if jwtconfig.onSuccess.redirect then
+    ckeckUriPattern = jwtconfig.onSuccess.redirect.uriPattern
+  end
   if not ckeckUriPattern or #ckeckUriPattern == 0 then
     ngx.log(ngx.INFO, "onSuccess.redirect.uriPatttern is not set.So is not permitted redirecting.")
     errorExit(jwtconfig, "Request includes redirect_uri patameter, but not permitted.", "redirect_not_permitted")
@@ -244,7 +261,7 @@ else
     else
       ngx.status = ngx.HTTP_OK
     end
-    local res_html = ngx.location.capture("/WebGate.jwt.settings/" .. onSuccess.content.template)
+    local res_html = ngx.location.capture("/jwt.settings/" .. onSuccess.content.template)
     local tplfunc = template.compile(res_html.body)
     local contenttype = wgu.decideContentType(onSuccess.content.template)
     ngx.header["Content-Type"] = contenttype

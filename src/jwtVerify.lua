@@ -14,7 +14,7 @@ function exitSinceDeny(jwtconfig, msg)
   ngx.status = status
 
   if jwtconfig.onDeny ~= nil and jwtconfig.onDeny.template ~= nil then
-    local deny_thml = ngx.location.capture("/WebGate.jwt.settings/" .. jwtconfig.onDeny.template)
+    local deny_thml = ngx.location.capture("/jwt.settings/" .. jwtconfig.onDeny.template)
     local tplfunc = template.compile(deny_thml.body)
     local contenttype = wgu.decideContentType(jwtconfig.onDeny.template)
     ngx.header["Content-Type"] = contenttype
@@ -130,7 +130,7 @@ function jwtVerifier.checkRevoked(jwtconfig, decodedClaim)
     return
   end
 
-  revokeRes = ngx.location.capture("/WebGate.jwt.settings/" .. ngx.var.revokeList)
+  revokeRes = ngx.location.capture("/jwt.settings/" .. ngx.var.revokeList)
   if revokeRes == nil or revokeRes.status ~= ngx.HTTP_OK or #revokeRes.body == 0 then
     ngx.log(ngx.INFO, "Revoke-list [" .. ngx.var.revokeList .. "] is empty or not exists.")
     return
@@ -195,9 +195,9 @@ if not confname or #confname == 0 then
     errorExitNoConf()
   end
 end
-configRes = ngx.location.capture("/WebGate.jwt.settings/" .. confname)
+configRes = ngx.location.capture("/jwt.settings/" .. confname)
 local jwtconfig = cjson.decode(configRes.body)
-ngx.log(ngx.INFO, "WebGate.jwt start processing...  " .. jwtconfig.type)
+ngx.log(ngx.INFO, "jwt start processing...  " .. jwtconfig.type)
 
 local verifyingFuncs = { jwtVerifier.tryAuthorizatuinHeader, jwtVerifier.tryCookie, jwtVerifier.tryRequestQuery }
 for _, func in ipairs(verifyingFuncs) do

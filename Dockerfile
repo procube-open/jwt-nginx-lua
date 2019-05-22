@@ -13,9 +13,11 @@ RUN mkdir -p /tmp/buffer
 COPY requires/*.spec /tmp/buffer/
 COPY jwt-nginx-lua.spec /tmp/buffer/
 COPY requires/*.patch /tmp/buffer/
-RUN mkdir -p /tmp/buffer/{src,src-lib}
+RUN mkdir -p /tmp/buffer/{src,src-lib,conf}
 COPY src/*.lua /tmp/buffer/src/
 COPY src-lib/*.lua /tmp/buffer/src-lib/
+COPY nginx.server.conf.example /tmp/buffer/
+COPY conf/* /tmp/buffer/conf/
 USER builder
 RUN mkdir -p ${HOME}/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 RUN echo "%_topdir %(echo ${HOME})/rpmbuild" > ${HOME}/.rpmmacros
@@ -36,7 +38,7 @@ RUN cd rpmbuild/SPECS \
     && patch -p 1 lua-cjson.spec < ../SOURCES/lua-cjson.spec.patch
 
 RUN mkdir -p ${HOME}/rpmbuild/SOURCES/jwt-nginx-lua
-RUN cp -R /tmp/buffer/src* ${HOME}/rpmbuild/SOURCES/jwt-nginx-lua/
+RUN cp -R /tmp/buffer/* ${HOME}/rpmbuild/SOURCES/jwt-nginx-lua/
 CMD ["/usr/bin/rpmbuild","-bb","rpmbuild/SPECS/lua-ffi.spec", \
                                "rpmbuild/SPECS/lua-cjson.spec", \
                                "rpmbuild/SPECS/lua-htmlparser.spec", \

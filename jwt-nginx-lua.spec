@@ -2,12 +2,14 @@
 %define lualibdir %{_libdir}/lua/%{luaver}
 %define luadatadir %{_datadir}/lua/%{luaver}
 %define luanginxdir %{_sysconfdir}/nginx/lua
+%define jwtconfdir %{_sysconfdir}/nginx/jwt.settings
+%define luanginxconfdir %{_sysconfdir}/nginx/conf.d
 %define libdistname webgate
 %define debug_package %{nil}
 
 Name:		jwt-nginx-lua
 
-Version:	0.0.1
+Version:	0.0.2
 Release:	1%{?dist}
 Summary:	Templating Engine (HTML) for Lua and OpenResty
 
@@ -34,6 +36,7 @@ This library requires an nginx build with OpenSSL, the ngx_lua module, and LuaJI
 This library requires an nginx build with OpenSSL,
 the [ngx_lua module](http://wiki.nginx.org/HttpLuaModule), and [LuaJIT 2.0](http://luajit.org/luajit.html).
 
+Or you can use openresty with some customization.
 
 %prep
 #%setup -q -n %{master_name}
@@ -46,8 +49,12 @@ the [ngx_lua module](http://wiki.nginx.org/HttpLuaModule), and [LuaJIT 2.0](http
 rm -rf "$RPM_BUILD_ROOT"
 mkdir -p $RPM_BUILD_ROOT%{luadatadir}/%{libdistname}
 mkdir -p $RPM_BUILD_ROOT%{luanginxdir}
+mkdir -p $RPM_BUILD_ROOT%{jwtconfdir}
+mkdir -p $RPM_BUILD_ROOT%{luanginxconfdir}
 install -m 644 $RPM_SOURCE_DIR/%{name}/src/*.lua $RPM_BUILD_ROOT%{luanginxdir}/
 install -m 644 $RPM_SOURCE_DIR/%{name}/src-lib/*.lua $RPM_BUILD_ROOT%{luadatadir}/%{libdistname}/
+install -m 644 $RPM_SOURCE_DIR/%{name}/conf/* $RPM_BUILD_ROOT%{jwtconfdir}/
+install -m 644 $RPM_SOURCE_DIR/%{name}/nginx.server.conf.example $RPM_BUILD_ROOT%{luanginxconfdir}/
 
 
 %clean
@@ -62,4 +69,6 @@ rm -rf "$RPM_BUILD_ROOT"
 #%doc README
 %{luanginxdir}/*
 %{luadatadir}/*
+%{jwtconfdir}/*
+%{luanginxconfdir}/*
 
