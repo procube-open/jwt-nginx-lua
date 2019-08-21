@@ -153,10 +153,7 @@ local req_args = ngx.req.get_uri_args()
 if (req_args.redirect_uri and #req_args.redirect_uri > 0) then
   ngx.log(ngx.INFO, "Request includes redirect_uri parameter. Check if is permitted.")
 
-  local ckeckUriPattern = nil
-  if jwtconfig.onSuccess.redirect then
-    ckeckUriPattern = jwtconfig.onSuccess.redirect.uriPattern
-  end
+  local ckeckUriPattern = jwtconfig.onSuccess.redirect and jwtconfig.onSuccess.redirect.uriPattern or nil
   if not ckeckUriPattern or #ckeckUriPattern == 0 then
     ngx.log(ngx.INFO, "onSuccess.redirect.uriPatttern is not set.So is not permitted redirecting.")
     errorExit(jwtconfig, "Request includes redirect_uri patameter, but not permitted.", "redirect_not_permitted")
