@@ -90,6 +90,7 @@ function verifyPayloadForUpdate(jwtconfig, payload)
 
   if not resolvedAttrs then
     ngx.log(ngx.INFO, "Error occurred while resolving attributes.")
+    exitSinceDeny(jwtconfig, "Error occurred while resolving attributes.")
   end
   
   for _,chkattr in ipairs(jwtconfig.diff_attrs.targets) do
@@ -109,8 +110,12 @@ function verifyPayloadForUpdate(jwtconfig, payload)
         exitSinceDeny(jwtconfig, "Detected diff_check, JWT has [" .. chkattr ..  "] but IdP sent no value.")
       end
     else
-      ngx.log(ngx.INFO, "His token has no [" .. chkattr .. "]. So failed verification.")
-      exitSinceDeny(jwtconfig, "Detected diff_check, JWT has no [" .. chkattr ..  "] but configuration has this.")
+      if resolvedAttrs[chkattr] then
+        ngx.log(ngx.INFO, "His token has no [" .. chkattr .. "], but IdP attribute has it. So failed verification.")
+        exitSinceDeny(jwtconfig, "Detected diff_check, JWT has no [" .. chkattr ..  "] but IdP attribute has this.")
+      else
+        ngx.log(ngx.INFO, "His token and IdP attribute have no [" .. chkattr .. "] both, So skip it.")
+      end
     end
   end
 end
