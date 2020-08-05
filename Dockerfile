@@ -29,7 +29,7 @@ RUN git clone https://github.com/mpx/lua-cjson.git rpmbuild/BUILD/lua-cjson
 RUN git clone https://github.com/msva/lua-htmlparser.git rpmbuild/SOURCES/lua-htmlparser
 RUN git clone https://github.com/bungle/lua-resty-template.git rpmbuild/SOURCES/lua-resty-template
 RUN git clone https://github.com/bungle/lua-resty-string.git rpmbuild/SOURCES/lua-resty-string
-RUN git clone https://github.com/luaforge/luacrypto.git rpmbuild/BUILD/lua-crypto
+RUN git clone https://github.com/starius/luacrypto.git rpmbuild/BUILD/lua-crypto
 RUN git clone https://github.com/facebookarchive/luaffifb.git rpmbuild/BUILD/luaffi
 RUN wget -O rpmbuild/SOURCES/lbase64.tar.gz http://webserver2.tecgraf.puc-rio.br/~lhf/ftp/lua/5.1/lbase64.tar.gz
 RUN git clone https://github.com/rrthomas/lrexlib.git rpmbuild/BUILD/lrexlib
