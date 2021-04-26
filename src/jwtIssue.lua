@@ -98,7 +98,7 @@ function genPayload(jwtconfig)
   if privateClaim.copyFromVariable and #privateClaim.copyFromVariable > 0 then
     local varNames = privateClaim.copyFromVariable
     for i,vname in ipairs(varNames) do
-      local vval = ngx.var[vname]
+      local vval = ngx.var["HTTP_" .. vname]
       if vval and #vval > 0 then
         ngx.log(ngx.INFO, "Variable " .. vname .. " is exists, so set value " .. vval)
         payload[vname] = vval
