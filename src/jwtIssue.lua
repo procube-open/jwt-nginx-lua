@@ -43,7 +43,7 @@ function genPayload(jwtconfig)
   local targetVarName = jwtconfig.subject.var_name
   local targetVal = ""
   local err
-  ngx.log(ngx.INFO, targetVarName)
+  ngx.log(ngx.INFO, "Acquiring subject value from " .. jwtconfig.subject.from .. " with " .. targetVarName)
   if (jwtconfig.subject.from == "variable") then
     targetVal = ngx.var[targetVarName]
   elseif (jwtconfig.subject.from == "header") then
@@ -59,17 +59,37 @@ function genPayload(jwtconfig)
   end
 
   local dtnow = os.time()
+  local tmpExp = dtnow + jwtconfig.encode.expSec
+  if (jwtconfig.encode.expSecExt) then
+    ngx.log(ngx.INFO, "encode.expSecExt is exists. Acquiring exp from external value")
+    if (jwtconfig.encode.expSecExt.from == "variable") then
+      tmpExp = ngx.var[jwtconfig.encode.expSecExt.var_name]
+    elseif (jwtconfig.encode.expSecExt.from == "header") then
+      tmpExp = ngx.req.get_headers()[jwtconfig.encode.expSecExt.var_name]
+    else
+      ngx.log(ngx.WARN, "Unknown subject source. Check your encode.expSecExt.from")
+    end
+
+    if not tmpExp then
+      ngx.log(ngx.WARN, "External value for exp is nil or empty")
+      tmpExp = dtnow + jwtconfig.encode.expSec
+    elseif not tonumber(tmpExp) then
+      ngx.log(ngx.WARN, "External value for exp is not number, so reset to expSec. " ..  tmpExp)
+      tmpExp = dtnow + jwtconfig.encode.expSec
+    end
+  end
+
   local payload = {
     sub = targetVal,
     nbf = dtnow,
     iat = dtnow,
-    exp = dtnow + jwtconfig.encode.expSec,
+    exp = tmpExp,
   }
 
   if jwtconfig.encode.updateExpSec and #jwtconfig.encode.updateExpSec > 0 then
     payload.expr = dtnow + jwtconfig.encode.updateExpSec
   else
-    ngx.log(ngx.INFO, "genPayload(): jwtconfig.encode.expSec is missing, maybe config format is too old. So do nothing.")
+    ngx.log(ngx.INFO, "genPayload(): jwtconfig.encode.updateExpSec is missing, maybe config format is too old. So do nothing.")
     -- payload.expr = dtnow + jwtconfig.encode.expSec
   end
 
