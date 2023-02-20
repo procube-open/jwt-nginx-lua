@@ -73,9 +73,12 @@ function genPayload(jwtconfig)
     if not tmpExp then
       ngx.log(ngx.WARN, "External value for exp is nil or empty")
       tmpExp = dtnow + jwtconfig.encode.expSec
-    elseif not tonumber(tmpExp) then
-      ngx.log(ngx.WARN, "External value for exp is not number, so reset to expSec. " ..  tmpExp)
-      tmpExp = dtnow + jwtconfig.encode.expSec
+    else
+      tmpExp = tonumber(tmpExp)
+      if not tmpExp then
+        ngx.log(ngx.WARN, "External value for exp is not number, so reset to expSec. ")
+        tmpExp = dtnow + jwtconfig.encode.expSec
+      end
     end
   end
 

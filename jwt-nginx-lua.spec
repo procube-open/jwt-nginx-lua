@@ -9,7 +9,7 @@
 
 Name:		jwt-nginx-lua
 
-Version:	0.0.2
+Version:	0.0.10
 Release:	1%{?dist}
 Summary:	Templating Engine (HTML) for Lua and OpenResty
 
